@@ -87,16 +87,18 @@ DEMO_QUESTIONS = [
 
 
 def validate_question(question: str) -> str:
-    """Validate the user question input.
+    """Valida y limpia la pregunta del usuario.
+
+    Verifica que la entrada sea una cadena válida y no esté vacía.
 
     Args:
-        question: Raw text from the user.
+        question: Texto raw del usuario.
 
     Returns:
-        A cleaned question string.
+        Pregunta limpia sin espacios en blanco al inicio/final.
 
     Raises:
-        ValueError: If the question is empty or only whitespace.
+        ValueError: Si la pregunta no es texto válido o está vacía.
     """
     if not isinstance(question, str):
         raise ValueError("La pregunta debe ser un texto válido.")
@@ -109,13 +111,16 @@ def validate_question(question: str) -> str:
 
 
 def build_document_store(documents: List[str]) -> FAISS:
-    """Create an in-memory FAISS vector store from the document collection.
+    """Construye un almacén vectorial FAISS a partir de documentos.
+
+    Procesa la colección de documentos usando CharacterTextSplitter,
+    genera embeddings con HuggingFace y crea un índice FAISS.
 
     Args:
-        documents: List of raw text documents.
+        documents: Lista de documentos de texto sin procesar.
 
     Returns:
-        A FAISS vector store ready for retrieval.
+        Almacén vectorial FAISS listo para búsqueda y recuperación.
     """
     cleaned_docs = [doc.strip() for doc in documents if isinstance(doc, str) and doc.strip()]
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
@@ -125,15 +130,21 @@ def build_document_store(documents: List[str]) -> FAISS:
             chunks.append(Document(page_content=chunk, metadata={"source": f"Documento {document}"}))
 
     embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5")
-    
+
     return FAISS.from_documents(chunks, embeddings)
 
 
-def build_qa_chain():
-    """Build the retrieval chain using OpenAI and the vector store.
+def build_qa_chain() -> object:
+    """Construye la cadena de recuperación con OpenAI y el almacén vectorial.
+
+    Inicializa el modelo GPT-4o-mini, configura el retriever con k=3,
+    crea el prompt template y retorna una cadena RetrievalChain.
 
     Returns:
-        A runnable chain for QA.
+        Objeto RetrievalChain con método invoke(query_dict) para QA.
+
+    Raises:
+        RuntimeError: Si OPENAI_API_KEY no está definida o la inicialización falla.
     """
     vector_store = build_document_store(DOCUMENTS)
 
@@ -200,7 +211,17 @@ Answer:"""
 
 
 def format_sources(source_documents: List[Document]) -> str:
-    """Format source documents for display in the chat output."""
+    """Formatea documentos fuente para mostrar en el output del chat.
+
+    Extrae nombres únicos de fuentes y los presenta en formato de lista.
+    Si no hay fuentes, retorna mensaje por defecto.
+
+    Args:
+        source_documents: Lista de documentos con metadata de origen.
+
+    Returns:
+        Cadena formateada con las fuentes encontradas o mensaje por defecto.
+    """
     if not source_documents:
         return "Fuentes: Ninguna fuente específica encontrada."
 
@@ -221,16 +242,20 @@ QA_CHAIN = build_qa_chain()
 
 
 def generate_response(question: str) -> str:
-    """Generate an answer using the retrieval-based Gemini chain.
+    """Genera una respuesta usando la cadena de recuperación basada en RAG.
+
+    Valida la pregunta, la envía al QA_CHAIN, y formatea la respuesta
+    con referencias a las fuentes utilizadas.
 
     Args:
-        question: The user question.
+        question: Pregunta del usuario sobre magnesio.
 
     Returns:
-        The answer text with source references.
+        Respuesta formateada con fuentes encontradas.
 
     Raises:
-        RuntimeError: If the model call fails.
+        ValueError: Si la pregunta es inválida.
+        RuntimeError: Si la llamada al modelo falla o hay problema con API de OpenAI.
     """
     validated_question = validate_question(question)
     try:
@@ -262,19 +287,46 @@ def generate_response(question: str) -> str:
 
 
 def handle_demo_question(question: str) -> Tuple[str, str]:
-    """Handle a demo question selection by filling the question and generating the response."""
+    """Maneja la selección de una pregunta de demostración.
+
+    Valida la pregunta y genera la respuesta, retornando la pregunta
+    validada y la respuesta con fuentes.
+
+    Args:
+        question: Pregunta de demostración preseleccionada.
+
+    Returns:
+        Tupla (pregunta_validada, respuesta_con_fuentes).
+
+    Raises:
+        ValueError: Si la pregunta es inválida.
+        RuntimeError: Si la generación de respuesta falla.
+    """
     validated_question = validate_question(question)
     answer = generate_response(validated_question)
     return validated_question, answer
 
 
 def clear_fields() -> Tuple[str, str]:
-    """Clear the question and response fields."""
+    """Limpia los campos de pregunta y respuesta.
+
+    Retorna tupla de cadenas vacías para limpiar la interfaz.
+
+    Returns:
+        Tupla de dos cadenas vacías ("", "").
+    """
     return "", ""
 
 
 def build_interface() -> gr.Blocks:
-    """Build the Gradio interface for the Magnesio RAG app."""
+    """Construye la interfaz Gradio para la aplicación RAG de Magnesio.
+
+    Crea una interfaz interactiva con campos de entrada/salida,
+    botones de envío/limpieza y preguntas de demostración.
+
+    Returns:
+        Objeto gr.Blocks configurado y listo para lanzar (launch).
+    """
     with gr.Blocks(title="Tipos de magnesio y sus propiedades") as demo:
         gr.Markdown("## Tipos de magnesio y sus propiedades")
         gr.Markdown(f"**Nota importante:** {IMPORTANT_NOTE}")
