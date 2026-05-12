@@ -1,0 +1,6 @@
+gradio>=3.0
+langchain>=0.1.0
+langchain-openai
+langchain-community
+langchain-huggingface
+faiss-cpu
