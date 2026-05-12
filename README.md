@@ -1,6 +1,7 @@
 # Proyecto Final - Fundamentos de Programación
 ## Máster en Machine Learning e Inteligencia Artificial
 ## OBS Business School
+## Estudiante: Yariela Carvajal Paniagua
 
 ## Tipos de magnesio y sus propiedades
 
